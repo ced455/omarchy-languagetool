@@ -38,6 +38,40 @@ omarchy plugin enable languagetool
 
 Plugin files hot-reload automatically in Omarchy.
 
+## Removal
+
+Disable and remove the plugin:
+
+```bash
+omarchy plugin remove languagetool --yes
+omarchy restart shell
+```
+
+This removes the plugin files from `~/.config/omarchy/plugins/languagetool`.
+It does not delete local configuration, history, or a stored Premium API key.
+
+To remove local data as well:
+
+```bash
+rm -rf ~/.config/omarchy/languagetool
+rm -rf ~/.local/state/omarchy/languagetool
+secret-tool clear service omarchy-languagetool account premium 2>/dev/null || true
+```
+
+## External dependencies
+
+Runtime:
+
+- **Python 3** — runs `bin/languagetool-bridge` (standard library only).
+- **Network access** — calls LanguageTool public, Premium, or self-hosted APIs
+  when you check text or refresh languages.
+- **`secret-tool`** (libsecret) — optional; stores the Premium API key in the
+  session keyring when Premium mode is used.
+
+Development and tests only:
+
+- **Node.js** — runs `tests/test_models.js`.
+
 ## Configuration
 
 Open LanguageTool from the bar, then the **Settings** tab.
