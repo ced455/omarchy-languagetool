@@ -49,7 +49,7 @@ check("round-trips supported settings", (() => {
 
 console.log("\nview model");
 const model = load("Model.js", {
-  Qt: { locale: () => "fr_FR" },
+  Qt: { locale: () => "en_US" },
 });
 const options = model.languageOptions([
   { code: "fr", name: "French" },
@@ -59,9 +59,9 @@ const options = model.languageOptions([
 check("prepends automatic detection", options[0].value === "auto");
 check("deduplicates language codes", options.length === 3, options);
 check("labels every connection mode",
-  model.modeLabel("public") === "SaaS gratuit"
-  && model.modeLabel("premium") === "SaaS Premium"
-  && model.modeLabel("selfhosted") === "Auto-hébergé");
+  model.modeLabel("public") === "Free SaaS"
+  && model.modeLabel("premium") === "Premium SaaS"
+  && model.modeLabel("selfhosted") === "Self-hosted");
 check("formats issue replacement",
   model.issueLabel({ message: "Accord", replacement: "bonne" })
   === "Accord → bonne");

@@ -28,12 +28,12 @@ for path in sorted(ROOT.glob("*.qml")):
     source = path.read_text(encoding="utf-8")
     for line, block in blocks(source, "Text"):
         if "font.family" not in block:
-            FAILURES.append(f"{path.name}:{line} Text sans font.family")
+            FAILURES.append(f"{path.name}:{line} Text missing font.family")
         if "textFormat: Text.PlainText" not in block:
-            FAILURES.append(f"{path.name}:{line} Text sans format PlainText")
+            FAILURES.append(f"{path.name}:{line} Text missing PlainText format")
     for line, block in blocks(source, "QQC.TextArea"):
         if "textFormat: TextEdit.PlainText" not in block:
-            FAILURES.append(f"{path.name}:{line} TextArea sans format PlainText")
+            FAILURES.append(f"{path.name}:{line} TextArea missing PlainText format")
 
 if FAILURES:
     for failure in FAILURES:

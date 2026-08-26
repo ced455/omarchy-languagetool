@@ -37,16 +37,16 @@ def state_file() -> Path:
 def normalize_endpoint(value: Any) -> str:
     raw = str(value or "").strip().rstrip("/")
     if not raw:
-        raise ValueError("L’URL du service LanguageTool est vide.")
+        raise ValueError("The LanguageTool service URL is empty.")
     try:
         parsed = urllib.parse.urlsplit(raw)
         port = parsed.port
     except ValueError as exc:
-        raise ValueError("L’URL du service LanguageTool est invalide.") from exc
+        raise ValueError("The LanguageTool service URL is invalid.") from exc
     if parsed.scheme not in ("http", "https") or not parsed.hostname:
-        raise ValueError("Utilisez une URL LanguageTool en HTTP ou HTTPS.")
+        raise ValueError("Use an HTTP or HTTPS LanguageTool URL.")
     if parsed.username or parsed.password:
-        raise ValueError("Les identifiants intégrés dans l’URL ne sont pas acceptés.")
+        raise ValueError("Credentials embedded in the URL are not allowed.")
     host = parsed.hostname
     if ":" in host and not host.startswith("["):
         host = "[" + host + "]"
@@ -73,14 +73,14 @@ def opener() -> urllib.request.OpenerDirector:
 def read_json_response(response: Any) -> Any:
     length = response.headers.get("Content-Length")
     if length and int(length) > MAX_RESPONSE_BYTES:
-        raise ValueError("La réponse LanguageTool est trop volumineuse.")
+        raise ValueError("The LanguageTool response is too large.")
     payload = response.read(MAX_RESPONSE_BYTES + 1)
     if len(payload) > MAX_RESPONSE_BYTES:
-        raise ValueError("La réponse LanguageTool est trop volumineuse.")
+        raise ValueError("The LanguageTool response is too large.")
     try:
         return json.loads(payload.decode("utf-8"))
     except (UnicodeDecodeError, json.JSONDecodeError) as exc:
-        raise ValueError("Le serveur LanguageTool a renvoyé une réponse invalide.") from exc
+        raise ValueError("The LanguageTool server returned an invalid response.") from exc
 
 
 def request_json(url: str, fields: dict[str, str] | None = None) -> Any:
@@ -105,7 +105,7 @@ def request_json(url: str, fields: dict[str, str] | None = None) -> Any:
         except Exception:
             pass
         suffix = (": " + detail[:300]) if detail else ""
-        raise ValueError("LanguageTool a répondu HTTP %d%s" % (exc.code, suffix)) from exc
+        raise ValueError("LanguageTool returned HTTP %d%s" % (exc.code, suffix)) from exc
     except urllib.error.URLError as exc:
         reason = str(getattr(exc, "reason", exc))
         target = urllib.parse.urlsplit(url)
@@ -113,11 +113,11 @@ def request_json(url: str, fields: dict[str, str] | None = None) -> Any:
         if target.port is not None:
             host += ":" + str(target.port)
         raise ValueError(
-            "Impossible de joindre LanguageTool sur %s : %s"
+            "Could not reach LanguageTool at %s: %s"
             % (host, reason[:200])
         ) from exc
     except TimeoutError as exc:
-        raise ValueError("LanguageTool n’a pas répondu à temps.") from exc
+        raise ValueError("LanguageTool did not respond in time.") from exc
 
 
 def utf16_index(text: str, units: int) -> int:
@@ -155,7 +155,7 @@ def sanitize_matches(text: str, raw_matches: Any) -> list[dict[str, Any]]:
         issues.append({
             "offset": start,
             "length": max(0, end - start),
-            "message": str(raw.get("message") or "Correction suggérée")[:1000],
+            "message": str(raw.get("message") or "Suggested fix")[:1000],
             "shortMessage": str(raw.get("shortMessage") or "")[:300],
             "replacement": replacements[0] if replacements else "",
             "replacements": replacements,
@@ -253,7 +253,7 @@ class Bridge:
     def handle_languages(self, command: dict[str, Any]) -> None:
         payload = request_json(api_url(command.get("endpoint"), "languages"))
         if not isinstance(payload, list):
-            raise ValueError("La liste des langues LanguageTool est invalide.")
+            raise ValueError("The LanguageTool language list is invalid.")
         languages = []
         for item in payload:
             if not isinstance(item, dict) or not item.get("code"):
@@ -269,9 +269,9 @@ class Bridge:
         request_id = str(command.get("requestId") or "")
         text = str(command.get("text") or "")
         if not text.strip():
-            raise ValueError("Le texte à corriger est vide.")
+            raise ValueError("The text to check is empty.")
         if len(text) > MAX_TEXT_CHARS:
-            raise ValueError("Le texte dépasse la limite de %d caractères." % MAX_TEXT_CHARS)
+            raise ValueError("Text exceeds the %d character limit." % MAX_TEXT_CHARS)
         mode = str(command.get("mode") or "public")
         fields = {
             "text": text,
@@ -281,12 +281,12 @@ class Bridge:
             username = str(command.get("username") or "").strip()
             api_key = str(command.get("apiKey") or "")
             if not username or not api_key:
-                raise ValueError("Les identifiants LanguageTool Premium sont incomplets.")
+                raise ValueError("LanguageTool Premium credentials are incomplete.")
             fields["username"] = username
             fields["apiKey"] = api_key
         payload = request_json(api_url(command.get("endpoint"), "check"), fields)
         if not isinstance(payload, dict):
-            raise ValueError("La réponse de correction LanguageTool est invalide.")
+            raise ValueError("The LanguageTool check response is invalid.")
         issues = sanitize_matches(text, payload.get("matches"))
         entry = {
             "id": uuid.uuid4().hex,
@@ -304,7 +304,7 @@ class Bridge:
 
     def handle(self, command: dict[str, Any]) -> None:
         if command.get("protocolVersion") != PROTOCOL_VERSION:
-            raise ValueError("Version du protocole incompatible.")
+            raise ValueError("Incompatible protocol version.")
         op = str(command.get("op") or "")
         if op == "languages":
             self.handle_languages(command)
@@ -319,7 +319,7 @@ class Bridge:
         elif op == "shutdown":
             raise EOFError
         else:
-            raise ValueError("Commande LanguageTool inconnue.")
+            raise ValueError("Unknown LanguageTool command.")
 
 
 def main() -> int:
@@ -330,16 +330,16 @@ def main() -> int:
         try:
             command = json.loads(line)
             if not isinstance(command, dict):
-                raise ValueError("La commande doit être un objet JSON.")
+                raise ValueError("The command must be a JSON object.")
             request_id = str(command.get("requestId") or "")
             secret = str(command.get("apiKey") or "")
             bridge.handle(command)
         except EOFError:
             return 0
         except Exception as exc:
-            message = str(exc) or "Erreur LanguageTool."
+            message = str(exc) or "LanguageTool error."
             if secret:
-                message = message.replace(secret, "[masqué]")
+                message = message.replace(secret, "[redacted]")
             emit({"ev": "error", "requestId": request_id, "message": message[:1000]})
     return 0
 

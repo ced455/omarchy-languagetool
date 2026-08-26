@@ -1,83 +1,82 @@
-# LanguageTool pour Omarchy
+# LanguageTool for Omarchy
 
-Plugin Quickshell pour corriger un texte depuis la barre Omarchy, comparer
-l’original à la version corrigée et conserver un historique local.
+Quickshell plugin to check text from the Omarchy bar, compare the original
+with the corrected version, and keep a local history.
 
-## Fonctionnalités
+## Features
 
-- API publique gratuite LanguageTool ;
-- compte SaaS Premium avec clé API stockée dans le trousseau système ;
-- serveur LanguageTool auto-hébergé en HTTP ou HTTPS ;
-- détection automatique de la langue ou sélection manuelle ;
-- comparaison côte à côte, détails des suggestions et copie du résultat ;
-- historique local, suppression entrée par entrée ou suppression totale ;
-- interface en français et couleurs héritées du thème Omarchy.
+- free public LanguageTool API;
+- Premium SaaS account with API key stored in the system keyring;
+- self-hosted LanguageTool server over HTTP or HTTPS;
+- automatic language detection or manual selection;
+- side-by-side comparison, suggestion details, and copy corrected text;
+- local history with per-entry or full deletion;
+- UI strings in English with colors inherited from the Omarchy theme.
 
 ## Installation
 
-Depuis un dépôt Git :
+From Git:
 
 ```bash
 omarchy plugin add https://github.com/ced455/omarchy-languagetool.git --enable
 ```
 
-Le bouton LanguageTool est ajouté à la section droite de la barre. Si le
-plugin est déjà installé mais désactivé :
+The LanguageTool button is added to the right section of the bar. If the
+plugin is already installed but disabled:
 
 ```bash
 omarchy plugin enable languagetool
 ```
 
-Pour développer depuis ce dossier, copiez ou liez le dossier sous
-`~/.config/omarchy/plugins/languagetool`, puis lancez :
+To develop from this folder, copy or link it under
+`~/.config/omarchy/plugins/languagetool`, then run:
 
 ```bash
 omarchy-shell shell rescanPlugins
 omarchy plugin enable languagetool
 ```
 
-Les fichiers de plugin sont rechargés automatiquement par Omarchy.
+Plugin files hot-reload automatically in Omarchy.
 
 ## Configuration
 
-Ouvrez LanguageTool depuis la barre, puis l’onglet **Réglages**.
+Open LanguageTool from the bar, then the **Settings** tab.
 
-- **SaaS gratuit** utilise `https://api.languagetool.org`.
-- **SaaS Premium** utilise `https://api.languagetoolplus.com`. Saisissez
-  l’identifiant et la clé créés dans les paramètres d’accès LanguageTool.
-- **Serveur auto-hébergé** accepte une base comme
-  `http://192.168.1.32:8010`, `192.168.1.32:8010`, `http://localhost:8081/v2`
-  ou `https://lt.example.com/v2`.
+- **Free SaaS** uses `https://api.languagetool.org`.
+- **Premium SaaS** uses `https://api.languagetoolplus.com`. Enter the
+  username and API key created in your LanguageTool access-token settings.
+- **Self-hosted server** accepts a base URL such as
+  `http://192.168.1.32:8010`, `192.168.1.32:8010`, `http://localhost:8081/v2`,
+  or `https://lt.example.com/v2`.
 
-Après avoir changé l’URL ou le mode, cliquez sur **Enregistrer** avant de
-corriger un texte. **Tester la connexion** utilise les valeurs saisies dans
-le formulaire, même si elles ne sont pas encore enregistrées.
+After changing the URL or mode, click **Save** before checking text.
+**Test connection** uses the values currently entered in the form, even if
+they have not been saved yet.
 
-La clé Premium est enregistrée avec `secret-tool` dans le trousseau de la
-session. Elle n’est écrite ni dans la configuration ni dans l’historique.
-Une URL self-hosted en HTTP fonctionne, mais le texte circule alors sans
-chiffrement.
+The Premium key is stored with `secret-tool` in the session keyring. It is
+never written to the config file or history. A self-hosted HTTP URL works,
+but text is then sent without transport encryption.
 
-## Données locales
+## Local data
 
-Configuration :
+Configuration:
 
 ```text
 ~/.config/omarchy/languagetool/config.json
 ```
 
-Historique (permissions `0600`, écriture atomique) :
+History (`0600` permissions, atomic writes):
 
 ```text
 ~/.local/state/omarchy/languagetool/history.json
 ```
 
-L’historique conserve les textes jusqu’à leur suppression explicite depuis
-l’interface. Aucun identifiant Premium n’y est enregistré.
+History keeps checked texts until you delete them from the UI. No Premium
+credentials are stored there.
 
-## Vérification
+## Verification
 
-Le bridge utilise uniquement la bibliothèque standard Python.
+The bridge uses only the Python standard library.
 
 ```bash
 omarchy plugin validate .
@@ -86,5 +85,4 @@ python3 tests/test_qml_style.py
 node tests/test_models.js
 ```
 
-Les tests HTTP utilisent un faux serveur local et ne transmettent aucun texte
-à LanguageTool.
+HTTP tests use a local fake server and do not send text to LanguageTool.

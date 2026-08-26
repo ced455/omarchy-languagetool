@@ -70,7 +70,7 @@ class FakeLanguageTool:
                             "context": {"text": text},
                         },
                         {
-                            "message": "Chevauchement ignoré pour le rendu",
+                            "message": "Overlap ignored for rendering",
                             "offset": utf16_offset + 1,
                             "length": 2,
                             "replacements": [{"value": "XX"}],
@@ -282,7 +282,7 @@ def test_errors_redact_secrets():
         )
         check("redacts API keys from errors",
               rejected and "LEAK_ME" not in json.dumps(rejected)
-              and "[masqué]" in rejected.get("message", ""), rejected)
+              and "[redacted]" in rejected.get("message", ""), rejected)
     finally:
         bridge.stop()
         server.stop()

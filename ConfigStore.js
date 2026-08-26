@@ -10,7 +10,7 @@ function normalizeMode(value) {
 function normalizeUrl(value) {
   var url = String(value || "").trim().replace(/\/+$/, "")
   if (!url) return ""
-  // Accepte 192.168.1.32:8010 ou localhost:8081 sans schéma explicite.
+  // Accept 192.168.1.32:8010 or localhost:8081 without an explicit scheme.
   if (!/^[a-zA-Z][a-zA-Z0-9+.-]*:\/\//.test(url))
     url = "http://" + url
   return url.replace(/\/+$/, "")
@@ -23,10 +23,10 @@ function parse(text) {
     raw = text ? JSON.parse(text) : {}
     if (!raw || typeof raw !== "object" || Array.isArray(raw)) {
       raw = {}
-      error = "La configuration doit être un objet JSON."
+      error = "Configuration must be a JSON object."
     }
   } catch (exception) {
-    error = "La configuration LanguageTool est invalide."
+    error = "LanguageTool configuration is invalid."
   }
 
   return {

@@ -34,7 +34,7 @@ BarWidget {
     foreground: root.bar ? root.bar.barForeground : Color.foreground
     tooltipText: root.languageTool && root.languageTool.lastError
       ? "LanguageTool · " + root.languageTool.lastError
-      : "Corriger un texte avec LanguageTool"
+      : "Check text with LanguageTool"
     onPressed: root.open()
   }
 }

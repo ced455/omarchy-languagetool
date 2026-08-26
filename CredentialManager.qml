@@ -55,7 +55,7 @@ QtObject {
       root.storing = false
       storeProcess.stdinEnabled = true
       if (exitCode === 0) root.stored(secret)
-      else root.failed("Impossible d’enregistrer la clé API dans le trousseau.")
+      else root.failed("Could not store the API key in the keyring.")
     }
   }
 
@@ -85,7 +85,7 @@ QtObject {
     onExited: function(exitCode) {
       root.clearing = false
       if (exitCode === 0 || exitCode === 1) root.cleared()
-      else root.failed("Impossible de supprimer la clé API du trousseau.")
+      else root.failed("Could not remove the API key from the keyring.")
     }
   }
 }

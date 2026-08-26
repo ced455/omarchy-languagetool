@@ -37,7 +37,7 @@ QtObject {
 
     onStarted: root.ready()
     onExited: function(exitCode) {
-      root.failed("Le service LanguageTool s’est arrêté (code " + exitCode + ").")
+      root.failed("The LanguageTool service stopped (code " + exitCode + ").")
     }
   }
 }

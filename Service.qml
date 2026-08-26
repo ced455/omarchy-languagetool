@@ -70,7 +70,7 @@ QtObject {
     onStored: function(secret) {
       root.premiumKeyStored = true
       root.settingsSaved()
-      root.statusMessage = "Réglages enregistrés."
+      root.statusMessage = "Settings saved."
     }
     onCleared: {
       root.premiumKeyStored = false
@@ -128,12 +128,12 @@ QtObject {
     var normalizedMode = ConfigStore.normalizeMode(nextMode)
     var normalizedUrl = ConfigStore.normalizeUrl(nextUrl)
     if (normalizedMode === "selfhosted" && !normalizedUrl) {
-      root.lastError = "Saisissez l’URL de votre serveur LanguageTool."
+      root.lastError = "Enter your LanguageTool server URL."
       return false
     }
     if (normalizedMode === "premium"
         && !String(nextUsername || "").trim()) {
-      root.lastError = "Saisissez l’identifiant de votre compte Premium."
+      root.lastError = "Enter your Premium account username."
       return false
     }
 
@@ -146,12 +146,12 @@ QtObject {
     var secret = String(apiKey || "")
     if (secret) {
       if (!credentials.store(secret)) {
-        root.lastError = "Le trousseau est déjà occupé."
+        root.lastError = "The keyring is busy."
         return false
       }
     } else {
       root.settingsSaved()
-      root.statusMessage = "Réglages enregistrés."
+      root.statusMessage = "Settings saved."
     }
     root.refreshLanguages()
     return true
@@ -159,7 +159,7 @@ QtObject {
 
   function removePremiumKey() {
     if (!credentials.clear())
-      root.lastError = "Le trousseau est déjà occupé."
+      root.lastError = "The keyring is busy."
   }
 
   function setLanguage(value) {
@@ -174,7 +174,7 @@ QtObject {
     var normalizedUrl = ConfigStore.normalizeUrl(url)
     if (normalizedMode === "selfhosted" && !normalizedUrl) {
       root.loadingLanguages = false
-      root.lastError = "Saisissez l’URL de votre serveur LanguageTool."
+      root.lastError = "Enter your LanguageTool server URL."
       return false
     }
     if (!bridge.running) {
@@ -195,16 +195,16 @@ QtObject {
     var normalizedMode = ConfigStore.normalizeMode(nextMode)
     var normalizedUrl = ConfigStore.normalizeUrl(nextUrl)
     if (normalizedMode === "selfhosted" && !normalizedUrl) {
-      root.lastError = "Saisissez l’URL de votre serveur LanguageTool."
+      root.lastError = "Enter your LanguageTool server URL."
       return false
     }
     if (normalizedMode === "premium" && !String(nextUsername || "").trim()) {
-      root.lastError = "Saisissez l’identifiant de votre compte Premium."
+      root.lastError = "Enter your Premium account username."
       return false
     }
     if (normalizedMode === "premium" && !String(apiKey || "").trim()
         && !root.premiumKeyStored) {
-      root.lastError = "Saisissez la clé API Premium pour tester la connexion."
+      root.lastError = "Enter the Premium API key to test the connection."
       return false
     }
     return refreshLanguages(normalizedMode, normalizedUrl)
@@ -213,7 +213,7 @@ QtObject {
   function check(text, selectedLanguage) {
     var source = String(text || "")
     if (!source.trim()) {
-      root.lastError = "Saisissez un texte à corriger."
+      root.lastError = "Enter text to check."
       return false
     }
     if (root.busy) return false
@@ -228,13 +228,13 @@ QtObject {
     if (!bridge.running) {
       bridge.start()
       root.busy = false
-      root.lastError = "Le service démarre. Réessayez dans un instant."
+      root.lastError = "The service is starting. Try again in a moment."
       return false
     }
     if (root.mode === "premium") {
       if (!credentials.lookup()) {
         root.busy = false
-        root.lastError = "Le trousseau est déjà occupé."
+        root.lastError = "The keyring is busy."
         return false
       }
     } else {
@@ -247,7 +247,7 @@ QtObject {
     if (!root.pendingText) return
     if (root.mode === "premium" && !apiKey) {
       root.busy = false
-      root.lastError = "Aucune clé API Premium n’est enregistrée."
+      root.lastError = "No Premium API key is stored."
       root.pendingText = ""
       return
     }
@@ -264,7 +264,7 @@ QtObject {
     root.pendingText = ""
     if (!sent) {
       root.busy = false
-      root.lastError = "Le service LanguageTool n’est pas disponible."
+      root.lastError = "The LanguageTool service is unavailable."
     }
   }
 
@@ -310,7 +310,7 @@ QtObject {
       root.busy = false
       root.currentResult = event.result || null
       root.statusMessage = event.result && event.result.issueCount === 0
-        ? "Aucune correction trouvée." : "Correction terminée."
+        ? "No suggestions found." : "Check complete."
       break
     case "history":
       root.history = Array.isArray(event.entries) ? event.entries : []
@@ -320,7 +320,7 @@ QtObject {
           && String(event.requestId) !== root.pendingRequestId) return
       root.busy = false
       root.loadingLanguages = false
-      root.lastError = String(event.message || "Erreur LanguageTool.")
+      root.lastError = String(event.message || "LanguageTool error.")
       break
     }
   }

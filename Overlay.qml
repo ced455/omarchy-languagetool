@@ -154,9 +154,9 @@ Item {
             anchors.rightMargin: Style.spacing.lg
             anchors.verticalCenter: parent.verticalCenter
             options: [
-              { value: "correction", label: "Correction" },
-              { value: "history", label: "Historique" },
-              { value: "settings", label: "Réglages" }
+              { value: "correction", label: "Check" },
+              { value: "history", label: "History" },
+              { value: "settings", label: "Settings" }
             ]
             value: root.tab
             foreground: root.foreground
@@ -172,7 +172,7 @@ Item {
             anchors.right: parent.right
             anchors.verticalCenter: parent.verticalCenter
             iconText: "󰅖"
-            tooltipText: "Fermer"
+            tooltipText: "Close"
             foreground: root.foreground
             onClicked: root.dismiss()
           }
@@ -216,9 +216,9 @@ Item {
         ConfirmDialog {
           id: clearDialog
           anchors.fill: parent
-          message: "Supprimer tout l’historique LanguageTool ?"
-          cancelText: "Annuler"
-          confirmText: "Tout supprimer"
+          message: "Delete all LanguageTool history?"
+          cancelText: "Cancel"
+          confirmText: "Delete all"
           foreground: root.foreground
           background: root.background
           onCanceled: opened = false
@@ -259,7 +259,7 @@ Item {
           anchors.right: parent.right
           bordered: true
           iconText: "󰓆"
-          text: root.service && root.service.busy ? "Correction…" : "Corriger"
+          text: root.service && root.service.busy ? "Checking…" : "Check"
           foreground: root.foreground
           opacity: root.service && root.service.busy ? 0.55 : 1
           onClicked: {
@@ -304,7 +304,7 @@ Item {
 
           Text {
             textFormat: Text.PlainText
-            text: "TEXTE ORIGINAL"
+            text: "ORIGINAL TEXT"
             color: root.muted
             font.family: root.family
             font.pixelSize: Style.font.caption
@@ -322,7 +322,7 @@ Item {
               text: root.inputText
               onTextChanged: if (root.inputText !== text) root.inputText = text
               textFormat: TextEdit.PlainText
-              placeholderText: "Saisissez ou collez votre texte ici…"
+              placeholderText: "Type or paste your text here…"
               wrapMode: TextEdit.Wrap
               color: root.foreground
               placeholderTextColor: root.muted
@@ -354,7 +354,7 @@ Item {
               id: correctedHeading
               textFormat: Text.PlainText
               width: parent.width - copyButton.width
-              text: "VERSION CORRIGÉE"
+              text: "CORRECTED TEXT"
               color: root.muted
               font.family: root.family
               font.pixelSize: Style.font.caption
@@ -365,7 +365,7 @@ Item {
               id: copyButton
               visible: !!root.result
               iconText: "󰆏"
-              text: "Copier"
+              text: "Copy"
               foreground: root.foreground
               fontSize: Style.font.caption
               onClicked: root.copy(root.result ? root.result.corrected : "")
@@ -382,7 +382,7 @@ Item {
               readOnly: true
               text: root.result ? String(root.result.corrected || "") : ""
               textFormat: TextEdit.PlainText
-              placeholderText: "La version corrigée apparaîtra ici."
+              placeholderText: "The corrected text will appear here."
               wrapMode: TextEdit.Wrap
               color: root.foreground
               placeholderTextColor: root.muted
@@ -406,8 +406,8 @@ Item {
         anchors { left: parent.left; right: parent.right; bottom: issues.top }
         anchors.bottomMargin: Style.spacing.sm
         text: root.result
-          ? "CORRECTIONS · " + Number(root.result.issueCount || 0)
-          : "CORRECTIONS"
+          ? "SUGGESTIONS · " + Number(root.result.issueCount || 0)
+          : "SUGGESTIONS"
         foreground: root.foreground
         fontFamily: root.family
       }
@@ -429,8 +429,8 @@ Item {
             width: parent.width
             visible: !root.result || !root.result.issues
               || root.result.issues.length === 0
-            text: root.result ? "Aucune correction suggérée."
-              : "Lancez une correction pour afficher les explications."
+            text: root.result ? "No suggestions."
+              : "Run a check to see explanations here."
             color: root.muted
             font.family: root.family
             font.pixelSize: Style.font.bodySmall
@@ -477,7 +477,7 @@ Item {
         Text {
           textFormat: Text.PlainText
           anchors.verticalCenter: parent.verticalCenter
-          text: (root.service ? root.service.history.length : 0) + " entrée(s)"
+          text: (root.service ? root.service.history.length : 0) + " entr" + (root.service && root.service.history.length === 1 ? "y" : "ies")
           color: root.muted
           font.family: root.family
           font.pixelSize: Style.font.caption
@@ -485,7 +485,7 @@ Item {
 
         Button {
           bordered: true
-          text: "Tout supprimer"
+            text: "Delete all"
           iconText: "󰆴"
           foreground: Color.urgent
           opacity: root.service && root.service.history.length ? 1 : 0.45
@@ -500,7 +500,7 @@ Item {
         textFormat: Text.PlainText
         anchors.centerIn: parent
         visible: !root.service || root.service.history.length === 0
-        text: "Aucun texte corrigé dans l’historique."
+        text: "No checked text in history yet."
         color: root.muted
         font.family: root.family
         font.pixelSize: Style.font.body
@@ -572,7 +572,7 @@ Item {
             anchors.rightMargin: Style.spacing.lg
             anchors.verticalCenter: parent.verticalCenter
             iconText: "󰆴"
-            tooltipText: "Supprimer cette entrée"
+            tooltipText: "Delete this entry"
             foreground: Color.urgent
             onClicked: if (root.service)
               root.service.deleteHistory(String(modelData.id || ""))
@@ -603,9 +603,9 @@ Item {
           width: Math.min(parent.width, Style.space(500))
           label: "Service LanguageTool"
           options: [
-            { value: "public", label: "SaaS gratuit" },
-            { value: "premium", label: "SaaS Premium" },
-            { value: "selfhosted", label: "Serveur auto-hébergé" }
+            { value: "public", label: "Free SaaS" },
+            { value: "premium", label: "Premium SaaS" },
+            { value: "selfhosted", label: "Self-hosted server" }
           ]
           value: root.modeDraft
           foreground: root.foreground
@@ -619,7 +619,7 @@ Item {
 
           Text {
             textFormat: Text.PlainText
-            text: "URL du serveur"
+            text: "Server URL"
             color: root.muted
             font.family: root.family
             font.pixelSize: Style.font.caption
@@ -640,7 +640,7 @@ Item {
           TextField {
             width: parent.width
             text: root.usernameDraft
-            placeholderText: "Identifiant ou adresse e-mail Premium"
+            placeholderText: "Username or Premium email address"
             onTextChanged: root.usernameDraft = text
           }
           TextField {
@@ -648,14 +648,14 @@ Item {
             text: root.apiKeyDraft
             password: true
             placeholderText: root.service && root.service.premiumKeyStored
-              ? "Clé enregistrée · laisser vide pour la conserver"
-              : "Clé API Premium"
+              ? "Key stored · leave blank to keep it"
+              : "Premium API key"
             onTextChanged: root.apiKeyDraft = text
           }
           Button {
             visible: root.service && root.service.premiumKeyStored
             bordered: true
-            text: "Supprimer la clé enregistrée"
+            text: "Remove stored key"
             foreground: Color.urgent
             onClicked: if (root.service) root.service.removePremiumKey()
           }
@@ -665,8 +665,8 @@ Item {
           textFormat: Text.PlainText
           width: Math.min(parent.width, Style.space(760))
           text: root.modeDraft === "selfhosted"
-            ? "Le texte est envoyé uniquement à l’URL configurée. Une URL HTTP n’est pas chiffrée."
-            : "Le texte saisi est envoyé aux serveurs LanguageTool. N’envoyez pas de contenu confidentiel via le SaaS."
+            ? "Text is sent only to the configured URL. HTTP is not encrypted."
+            : "Typed text is sent to LanguageTool servers. Do not send confidential content through SaaS."
           color: root.muted
           font.family: root.family
           font.pixelSize: Style.font.bodySmall
@@ -679,7 +679,7 @@ Item {
           Button {
             bordered: true
             text: root.service && root.service.credentials.busy
-              ? "Enregistrement…" : "Enregistrer"
+              ? "Saving…" : "Save"
             foreground: root.foreground
             opacity: root.service && root.service.credentials.busy ? 0.5 : 1
             onClicked: {
@@ -695,7 +695,7 @@ Item {
           Button {
             bordered: true
             text: root.service && root.service.loadingLanguages
-              ? "Test…" : "Tester la connexion"
+              ? "Testing…" : "Test connection"
             foreground: root.foreground
             opacity: root.service && root.service.loadingLanguages ? 0.5 : 1
             onClicked: if (root.service && !root.service.loadingLanguages)
@@ -725,7 +725,7 @@ Item {
         Text {
           textFormat: Text.PlainText
           width: parent.width
-          text: "L’historique contient le texte original et corrigé. Il reste uniquement sur cette machine dans ~/.local/state/omarchy/languagetool/history.json jusqu’à sa suppression."
+          text: "History stores the original and corrected text locally in ~/.local/state/omarchy/languagetool/history.json until you delete it."
           color: root.muted
           font.family: root.family
           font.pixelSize: Style.font.caption
