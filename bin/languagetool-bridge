@@ -1,0 +1,341 @@
+#!/usr/bin/env python3
+"""Small NDJSON bridge between Quickshell and LanguageTool."""
+
+from __future__ import annotations
+
+import json
+import os
+import ssl
+import sys
+import tempfile
+import time
+import urllib.error
+import urllib.parse
+import urllib.request
+import uuid
+from pathlib import Path
+from typing import Any
+
+PROTOCOL_VERSION = 1
+REQUEST_TIMEOUT = 20
+MAX_RESPONSE_BYTES = 8 * 1024 * 1024
+MAX_TEXT_CHARS = 200_000
+
+
+def emit(event: dict[str, Any]) -> None:
+    event["protocolVersion"] = PROTOCOL_VERSION
+    print(json.dumps(event, ensure_ascii=False, separators=(",", ":")), flush=True)
+
+
+def state_file() -> Path:
+    state_root = os.environ.get("XDG_STATE_HOME")
+    if state_root:
+        return Path(state_root) / "omarchy" / "languagetool" / "history.json"
+    return Path.home() / ".local" / "state" / "omarchy" / "languagetool" / "history.json"
+
+
+def normalize_endpoint(value: Any) -> str:
+    raw = str(value or "").strip().rstrip("/")
+    if not raw:
+        raise ValueError("L’URL du service LanguageTool est vide.")
+    try:
+        parsed = urllib.parse.urlsplit(raw)
+        port = parsed.port
+    except ValueError as exc:
+        raise ValueError("L’URL du service LanguageTool est invalide.") from exc
+    if parsed.scheme not in ("http", "https") or not parsed.hostname:
+        raise ValueError("Utilisez une URL LanguageTool en HTTP ou HTTPS.")
+    if parsed.username or parsed.password:
+        raise ValueError("Les identifiants intégrés dans l’URL ne sont pas acceptés.")
+    host = parsed.hostname
+    if ":" in host and not host.startswith("["):
+        host = "[" + host + "]"
+    netloc = host + ((":" + str(port)) if port is not None else "")
+    path = parsed.path.rstrip("/")
+    if path.endswith("/v2"):
+        path = path[:-3]
+    return urllib.parse.urlunsplit((parsed.scheme, netloc, path, "", "")).rstrip("/")
+
+
+def api_url(endpoint: Any, resource: str) -> str:
+    return normalize_endpoint(endpoint) + "/v2/" + resource.lstrip("/")
+
+
+def opener() -> urllib.request.OpenerDirector:
+    # A Premium key must not be silently handed to a proxy inherited from the
+    # shell environment. Explicit reverse proxies belong in the configured URL.
+    return urllib.request.build_opener(
+        urllib.request.ProxyHandler({}),
+        urllib.request.HTTPSHandler(context=ssl.create_default_context()),
+    )
+
+
+def read_json_response(response: Any) -> Any:
+    length = response.headers.get("Content-Length")
+    if length and int(length) > MAX_RESPONSE_BYTES:
+        raise ValueError("La réponse LanguageTool est trop volumineuse.")
+    payload = response.read(MAX_RESPONSE_BYTES + 1)
+    if len(payload) > MAX_RESPONSE_BYTES:
+        raise ValueError("La réponse LanguageTool est trop volumineuse.")
+    try:
+        return json.loads(payload.decode("utf-8"))
+    except (UnicodeDecodeError, json.JSONDecodeError) as exc:
+        raise ValueError("Le serveur LanguageTool a renvoyé une réponse invalide.") from exc
+
+
+def request_json(url: str, fields: dict[str, str] | None = None) -> Any:
+    data = None
+    method = "GET"
+    headers = {"Accept": "application/json", "User-Agent": "Omarchy-LanguageTool/1.0"}
+    if fields is not None:
+        data = urllib.parse.urlencode(fields).encode("utf-8")
+        method = "POST"
+        headers["Content-Type"] = "application/x-www-form-urlencoded"
+    request = urllib.request.Request(url, data=data, headers=headers, method=method)
+    try:
+        with opener().open(request, timeout=REQUEST_TIMEOUT) as response:
+            return read_json_response(response)
+    except urllib.error.HTTPError as exc:
+        detail = ""
+        try:
+            body = exc.read(8192)
+            parsed = json.loads(body.decode("utf-8"))
+            if isinstance(parsed, dict):
+                detail = str(parsed.get("message") or parsed.get("error") or "")
+        except Exception:
+            pass
+        suffix = (": " + detail[:300]) if detail else ""
+        raise ValueError("LanguageTool a répondu HTTP %d%s" % (exc.code, suffix)) from exc
+    except urllib.error.URLError as exc:
+        reason = str(getattr(exc, "reason", exc))
+        raise ValueError("Impossible de joindre LanguageTool : " + reason[:240]) from exc
+    except TimeoutError as exc:
+        raise ValueError("LanguageTool n’a pas répondu à temps.") from exc
+
+
+def utf16_index(text: str, units: int) -> int:
+    if units <= 0:
+        return 0
+    consumed = 0
+    for index, char in enumerate(text):
+        consumed += 2 if ord(char) > 0xFFFF else 1
+        if consumed >= units:
+            return index + 1
+    return len(text)
+
+
+def sanitize_matches(text: str, raw_matches: Any) -> list[dict[str, Any]]:
+    issues: list[dict[str, Any]] = []
+    if not isinstance(raw_matches, list):
+        return issues
+    for raw in raw_matches:
+        if not isinstance(raw, dict):
+            continue
+        offset_units = raw.get("offset")
+        length_units = raw.get("length")
+        if not isinstance(offset_units, int) or not isinstance(length_units, int):
+            continue
+        if offset_units < 0 or length_units < 0:
+            continue
+        start = utf16_index(text, offset_units)
+        end = utf16_index(text, offset_units + length_units)
+        replacements = []
+        for item in raw.get("replacements", [])[:8]:
+            if isinstance(item, dict) and isinstance(item.get("value"), str):
+                replacements.append(item["value"])
+        rule = raw.get("rule") if isinstance(raw.get("rule"), dict) else {}
+        context = raw.get("context") if isinstance(raw.get("context"), dict) else {}
+        issues.append({
+            "offset": start,
+            "length": max(0, end - start),
+            "message": str(raw.get("message") or "Correction suggérée")[:1000],
+            "shortMessage": str(raw.get("shortMessage") or "")[:300],
+            "replacement": replacements[0] if replacements else "",
+            "replacements": replacements,
+            "ruleId": str(rule.get("id") or "")[:200],
+            "context": str(context.get("text") or "")[:1000],
+        })
+    return issues
+
+
+def corrected_text(text: str, issues: list[dict[str, Any]]) -> str:
+    applicable = []
+    last_end = -1
+    for issue in sorted(issues, key=lambda item: (item["offset"], item["length"])):
+        start = issue["offset"]
+        end = start + issue["length"]
+        if not issue["replacement"] or start < last_end or end > len(text):
+            continue
+        applicable.append(issue)
+        last_end = end
+    result = text
+    for issue in reversed(applicable):
+        start = issue["offset"]
+        result = result[:start] + issue["replacement"] + result[start + issue["length"]:]
+    return result
+
+
+def detected_language(payload: Any) -> str:
+    if not isinstance(payload, dict):
+        return ""
+    language = payload.get("language")
+    if not isinstance(language, dict):
+        return ""
+    detected = language.get("detectedLanguage")
+    if isinstance(detected, dict) and detected.get("code"):
+        return str(detected["code"])
+    return str(language.get("code") or "")
+
+
+class HistoryStore:
+    def __init__(self, path: Path | None = None) -> None:
+        self.path = path or state_file()
+
+    def load(self) -> list[dict[str, Any]]:
+        try:
+            raw = json.loads(self.path.read_text(encoding="utf-8"))
+        except (OSError, ValueError, TypeError):
+            return []
+        if not isinstance(raw, list):
+            return []
+        return [item for item in raw if isinstance(item, dict) and item.get("id")]
+
+    def save(self, entries: list[dict[str, Any]]) -> None:
+        self.path.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
+        fd, temporary = tempfile.mkstemp(
+            prefix=".history-", suffix=".json", dir=str(self.path.parent)
+        )
+        try:
+            os.fchmod(fd, 0o600)
+            with os.fdopen(fd, "w", encoding="utf-8") as handle:
+                json.dump(entries, handle, ensure_ascii=False, indent=2)
+                handle.write("\n")
+                handle.flush()
+                os.fsync(handle.fileno())
+            os.replace(temporary, self.path)
+            os.chmod(self.path, 0o600)
+        finally:
+            try:
+                os.unlink(temporary)
+            except FileNotFoundError:
+                pass
+
+    def add(self, entry: dict[str, Any]) -> list[dict[str, Any]]:
+        entries = self.load()
+        entries.insert(0, entry)
+        self.save(entries)
+        return entries
+
+    def delete(self, entry_id: str) -> list[dict[str, Any]]:
+        entries = [entry for entry in self.load() if str(entry.get("id")) != entry_id]
+        self.save(entries)
+        return entries
+
+    def clear(self) -> list[dict[str, Any]]:
+        self.save([])
+        return []
+
+
+class Bridge:
+    def __init__(self, history: HistoryStore | None = None) -> None:
+        self.history = history or HistoryStore()
+
+    def history_event(self, entries: list[dict[str, Any]] | None = None) -> None:
+        emit({"ev": "history", "entries": self.history.load() if entries is None else entries})
+
+    def handle_languages(self, command: dict[str, Any]) -> None:
+        payload = request_json(api_url(command.get("endpoint"), "languages"))
+        if not isinstance(payload, list):
+            raise ValueError("La liste des langues LanguageTool est invalide.")
+        languages = []
+        for item in payload:
+            if not isinstance(item, dict) or not item.get("code"):
+                continue
+            languages.append({
+                "code": str(item["code"]),
+                "name": str(item.get("name") or item["code"]),
+            })
+        languages.sort(key=lambda item: (item["name"].casefold(), item["code"]))
+        emit({"ev": "languages", "languages": languages})
+
+    def handle_check(self, command: dict[str, Any]) -> None:
+        request_id = str(command.get("requestId") or "")
+        text = str(command.get("text") or "")
+        if not text.strip():
+            raise ValueError("Le texte à corriger est vide.")
+        if len(text) > MAX_TEXT_CHARS:
+            raise ValueError("Le texte dépasse la limite de %d caractères." % MAX_TEXT_CHARS)
+        mode = str(command.get("mode") or "public")
+        fields = {
+            "text": text,
+            "language": str(command.get("language") or "auto"),
+        }
+        if mode == "premium":
+            username = str(command.get("username") or "").strip()
+            api_key = str(command.get("apiKey") or "")
+            if not username or not api_key:
+                raise ValueError("Les identifiants LanguageTool Premium sont incomplets.")
+            fields["username"] = username
+            fields["apiKey"] = api_key
+        payload = request_json(api_url(command.get("endpoint"), "check"), fields)
+        if not isinstance(payload, dict):
+            raise ValueError("La réponse de correction LanguageTool est invalide.")
+        issues = sanitize_matches(text, payload.get("matches"))
+        entry = {
+            "id": uuid.uuid4().hex,
+            "timestamp": int(time.time() * 1000),
+            "original": text,
+            "corrected": corrected_text(text, issues),
+            "issues": issues,
+            "issueCount": len(issues),
+            "detectedLanguage": detected_language(payload),
+            "mode": mode,
+        }
+        entries = self.history.add(entry)
+        emit({"ev": "check_result", "requestId": request_id, "result": entry})
+        self.history_event(entries)
+
+    def handle(self, command: dict[str, Any]) -> None:
+        if command.get("protocolVersion") != PROTOCOL_VERSION:
+            raise ValueError("Version du protocole incompatible.")
+        op = str(command.get("op") or "")
+        if op == "languages":
+            self.handle_languages(command)
+        elif op == "check":
+            self.handle_check(command)
+        elif op == "history_list":
+            self.history_event()
+        elif op == "history_delete":
+            self.history_event(self.history.delete(str(command.get("id") or "")))
+        elif op == "history_clear":
+            self.history_event(self.history.clear())
+        elif op == "shutdown":
+            raise EOFError
+        else:
+            raise ValueError("Commande LanguageTool inconnue.")
+
+
+def main() -> int:
+    bridge = Bridge()
+    for line in sys.stdin:
+        request_id = ""
+        secret = ""
+        try:
+            command = json.loads(line)
+            if not isinstance(command, dict):
+                raise ValueError("La commande doit être un objet JSON.")
+            request_id = str(command.get("requestId") or "")
+            secret = str(command.get("apiKey") or "")
+            bridge.handle(command)
+        except EOFError:
+            return 0
+        except Exception as exc:
+            message = str(exc) or "Erreur LanguageTool."
+            if secret:
+                message = message.replace(secret, "[masqué]")
+            emit({"ev": "error", "requestId": request_id, "message": message[:1000]})
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

@@ -1,0 +1,26 @@
+{
+  "schemaVersion": 1,
+  "id": "languagetool",
+  "name": "LanguageTool",
+  "version": "1.0.0",
+  "author": "Cedric",
+  "license": "MIT",
+  "description": "Correct text with LanguageTool Cloud, Premium, or a self-hosted server.",
+  "kinds": [
+    "service",
+    "bar-widget",
+    "overlay"
+  ],
+  "entryPoints": {
+    "service": "Service.qml",
+    "barWidget": "BarWidget.qml",
+    "overlay": "Overlay.qml"
+  },
+  "barWidget": {
+    "displayName": "LanguageTool",
+    "description": "Open a grammar checker with local history.",
+    "category": "Utilities",
+    "allowMultiple": false,
+    "defaultSection": "right"
+  }
+}
