@@ -8,7 +8,11 @@ function normalizeMode(value) {
 }
 
 function normalizeUrl(value) {
-  var url = String(value || "").trim()
+  var url = String(value || "").trim().replace(/\/+$/, "")
+  if (!url) return ""
+  // Accepte 192.168.1.32:8010 ou localhost:8081 sans schéma explicite.
+  if (!/^[a-zA-Z][a-zA-Z0-9+.-]*:\/\//.test(url))
+    url = "http://" + url
   return url.replace(/\/+$/, "")
 }
 

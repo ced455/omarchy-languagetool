@@ -699,7 +699,9 @@ Item {
             foreground: root.foreground
             opacity: root.service && root.service.loadingLanguages ? 0.5 : 1
             onClicked: if (root.service && !root.service.loadingLanguages)
-              root.service.refreshLanguages()
+              root.service.testConnection(
+                root.modeDraft, root.urlDraft,
+                root.usernameDraft, root.apiKeyDraft)
           }
         }
 

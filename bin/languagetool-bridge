@@ -108,7 +108,14 @@ def request_json(url: str, fields: dict[str, str] | None = None) -> Any:
         raise ValueError("LanguageTool a répondu HTTP %d%s" % (exc.code, suffix)) from exc
     except urllib.error.URLError as exc:
         reason = str(getattr(exc, "reason", exc))
-        raise ValueError("Impossible de joindre LanguageTool : " + reason[:240]) from exc
+        target = urllib.parse.urlsplit(url)
+        host = target.hostname or url
+        if target.port is not None:
+            host += ":" + str(target.port)
+        raise ValueError(
+            "Impossible de joindre LanguageTool sur %s : %s"
+            % (host, reason[:200])
+        ) from exc
     except TimeoutError as exc:
         raise ValueError("LanguageTool n’a pas répondu à temps.") from exc
 

@@ -93,11 +93,15 @@ QtObject {
     })
   }
 
-  function endpoint() {
+  function endpointFrom(mode, selfHostedUrl) {
     return ConfigStore.endpoint({
-      mode: root.mode,
-      selfHostedUrl: root.selfHostedUrl
+      mode: mode,
+      selfHostedUrl: selfHostedUrl
     })
+  }
+
+  function endpoint() {
+    return endpointFrom(root.mode, root.selfHostedUrl)
   }
 
   function applyConfig(text) {
@@ -163,17 +167,47 @@ QtObject {
     root.saveConfig()
   }
 
-  function refreshLanguages() {
+  function refreshLanguages(modeOverride, urlOverride) {
+    var mode = modeOverride !== undefined ? modeOverride : root.mode
+    var url = urlOverride !== undefined ? urlOverride : root.selfHostedUrl
+    var normalizedMode = ConfigStore.normalizeMode(mode)
+    var normalizedUrl = ConfigStore.normalizeUrl(url)
+    if (normalizedMode === "selfhosted" && !normalizedUrl) {
+      root.loadingLanguages = false
+      root.lastError = "Saisissez l’URL de votre serveur LanguageTool."
+      return false
+    }
     if (!bridge.running) {
       bridge.start()
-      return
+      return false
     }
     root.loadingLanguages = true
     root.lastError = ""
+    root.statusMessage = ""
     bridge.send({
       op: "languages",
-      endpoint: root.endpoint()
+      endpoint: endpointFrom(normalizedMode, normalizedUrl)
     })
+    return true
+  }
+
+  function testConnection(nextMode, nextUrl, nextUsername, apiKey) {
+    var normalizedMode = ConfigStore.normalizeMode(nextMode)
+    var normalizedUrl = ConfigStore.normalizeUrl(nextUrl)
+    if (normalizedMode === "selfhosted" && !normalizedUrl) {
+      root.lastError = "Saisissez l’URL de votre serveur LanguageTool."
+      return false
+    }
+    if (normalizedMode === "premium" && !String(nextUsername || "").trim()) {
+      root.lastError = "Saisissez l’identifiant de votre compte Premium."
+      return false
+    }
+    if (normalizedMode === "premium" && !String(apiKey || "").trim()
+        && !root.premiumKeyStored) {
+      root.lastError = "Saisissez la clé API Premium pour tester la connexion."
+      return false
+    }
+    return refreshLanguages(normalizedMode, normalizedUrl)
   }
 
   function check(text, selectedLanguage) {

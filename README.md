@@ -18,7 +18,7 @@ l’original à la version corrigée et conserver un historique local.
 Depuis un dépôt Git :
 
 ```bash
-omarchy plugin add https://example.com/cedric/languagetool.git --enable
+omarchy plugin add https://github.com/ced455/omarchy-languagetool.git --enable
 ```
 
 Le bouton LanguageTool est ajouté à la section droite de la barre. Si le
@@ -46,8 +46,12 @@ Ouvrez LanguageTool depuis la barre, puis l’onglet **Réglages**.
 - **SaaS Premium** utilise `https://api.languagetoolplus.com`. Saisissez
   l’identifiant et la clé créés dans les paramètres d’accès LanguageTool.
 - **Serveur auto-hébergé** accepte une base comme
-  `http://localhost:8081`, `http://localhost:8081/v2` ou
-  `https://lt.example.com/v2`.
+  `http://192.168.1.32:8010`, `192.168.1.32:8010`, `http://localhost:8081/v2`
+  ou `https://lt.example.com/v2`.
+
+Après avoir changé l’URL ou le mode, cliquez sur **Enregistrer** avant de
+corriger un texte. **Tester la connexion** utilise les valeurs saisies dans
+le formulaire, même si elles ne sont pas encore enregistrées.
 
 La clé Premium est enregistrée avec `secret-tool` dans le trousseau de la
 session. Elle n’est écrite ni dans la configuration ni dans l’historique.

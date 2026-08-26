@@ -29,6 +29,8 @@ const config = load("ConfigStore.js");
 check("defaults to public mode", config.parse("").config.mode === "public");
 check("normalizes trailing slashes",
   config.normalizeUrl(" http://localhost:8081/v2/// ") === "http://localhost:8081/v2");
+check("adds http scheme to bare host:port",
+  config.normalizeUrl("192.168.1.32:8010") === "http://192.168.1.32:8010");
 check("selects Premium endpoint",
   config.endpoint({ mode: "premium" }) === "https://api.languagetoolplus.com");
 check("round-trips supported settings", (() => {
