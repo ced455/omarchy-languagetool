@@ -3,6 +3,8 @@
 Quickshell plugin to check text from the Omarchy bar, compare the original
 with the corrected version, and keep a local history.
 
+![LanguageTool plugin preview](preview.png)
+
 ## Features
 
 - free public LanguageTool API;
